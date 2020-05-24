@@ -1,0 +1,62 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29613.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SpeedCheck", "SpeedCheck\SpeedCheck.csproj", "{8490ADE1-1886-412A-A69B-9453638BAB62}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "PL", "PL", "{85C9251D-DEBC-47A4-BA59-24AB033F6088}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "BLL", "BLL", "{8FFB5F1C-7254-498E-90E4-2DA602E7F757}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DAL", "DAL", "{26E79AD5-7F61-43EE-9CD5-737EB45AAC9A}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SpeedCheck.BusinessLogic", "SpeedCheck.BusinessLogic\SpeedCheck.BusinessLogic.csproj", "{B0A9714A-9348-4077-A1E8-CE4768E3BE87}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SpeedCheck.DAL.Repositories", "SpeedCheck.DAL.Repositories\SpeedCheck.DAL.Repositories.csproj", "{CB34EFC8-CCD3-452C-942A-1EFF519F6827}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SpeedCheck.DAL.Models", "SpeedCheck.DAL.Models\SpeedCheck.DAL.Models.csproj", "{EB693FF0-82E1-471F-A873-24CCCBA73361}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SpeedCheck.DAL.Tests", "SpeedCheck.DAL.Tests\SpeedCheck.DAL.Tests.csproj", "{65943B38-47FF-4581-967E-93075EB74345}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8490ADE1-1886-412A-A69B-9453638BAB62}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8490ADE1-1886-412A-A69B-9453638BAB62}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8490ADE1-1886-412A-A69B-9453638BAB62}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8490ADE1-1886-412A-A69B-9453638BAB62}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B0A9714A-9348-4077-A1E8-CE4768E3BE87}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B0A9714A-9348-4077-A1E8-CE4768E3BE87}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B0A9714A-9348-4077-A1E8-CE4768E3BE87}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B0A9714A-9348-4077-A1E8-CE4768E3BE87}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CB34EFC8-CCD3-452C-942A-1EFF519F6827}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CB34EFC8-CCD3-452C-942A-1EFF519F6827}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CB34EFC8-CCD3-452C-942A-1EFF519F6827}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CB34EFC8-CCD3-452C-942A-1EFF519F6827}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EB693FF0-82E1-471F-A873-24CCCBA73361}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EB693FF0-82E1-471F-A873-24CCCBA73361}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EB693FF0-82E1-471F-A873-24CCCBA73361}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EB693FF0-82E1-471F-A873-24CCCBA73361}.Release|Any CPU.Build.0 = Release|Any CPU
+		{65943B38-47FF-4581-967E-93075EB74345}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{65943B38-47FF-4581-967E-93075EB74345}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{65943B38-47FF-4581-967E-93075EB74345}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{65943B38-47FF-4581-967E-93075EB74345}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{8490ADE1-1886-412A-A69B-9453638BAB62} = {85C9251D-DEBC-47A4-BA59-24AB033F6088}
+		{B0A9714A-9348-4077-A1E8-CE4768E3BE87} = {8FFB5F1C-7254-498E-90E4-2DA602E7F757}
+		{CB34EFC8-CCD3-452C-942A-1EFF519F6827} = {26E79AD5-7F61-43EE-9CD5-737EB45AAC9A}
+		{EB693FF0-82E1-471F-A873-24CCCBA73361} = {26E79AD5-7F61-43EE-9CD5-737EB45AAC9A}
+		{65943B38-47FF-4581-967E-93075EB74345} = {26E79AD5-7F61-43EE-9CD5-737EB45AAC9A}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {CBFA6508-13C0-4A8D-8D52-FA6DD5788BF7}
+	EndGlobalSection
+EndGlobal
