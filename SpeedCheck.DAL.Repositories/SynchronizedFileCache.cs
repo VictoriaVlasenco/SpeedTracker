@@ -10,25 +10,51 @@ namespace SpeedCheck.DAL.Repositories
     public static class SynchronizedFileCache<T>// : ISynchronizedFileCache<T>
     {
         private static ReaderWriterLockSlim cacheLock = new ReaderWriterLockSlim();
-        private static List<byte> innerCache = new List<byte>();
+        private static Dictionary<string, List<byte>> innerCache = new Dictionary<string, List<byte>>();// new List<byte>();
 
         public static int Count
         { get { return innerCache.Count; } }
 
-        //public string Read(int key)
-        //{
-        //    cacheLock.EnterReadLock();
-        //    try
-        //    {
-        //        return innerCache[key];
-        //    }
-        //    finally
-        //    {
-        //        cacheLock.ExitReadLock();
-        //    }
-        //}
+        public static List<byte> Read(string filePath, int offset, int bytesToRead)
+        {
+            cacheLock.EnterReadLock();
+            try
+            {
+                var res = new List<byte>();
+                using (FileStream fsSource = new FileStream(filePath,
+                    FileMode.Open, FileAccess.Read, FileShare.None))
+                {
+                    bytesToRead = offset + bytesToRead < fsSource.Length ? bytesToRead : (int)fsSource.Length - offset;
+                    if (bytesToRead < 1)
+                    {
+                        //totalCount = 0;
+                        return new List<byte>();
+                    }
 
-        public static void Add(T entity)
+                    byte[] a = new byte[bytesToRead];
+                    //fsSource.Read(a, offset - 1, (int)bytesToRead);
+                    fsSource.Seek(offset, SeekOrigin.Begin);
+                    fsSource.Read(a, 0, bytesToRead);
+
+                    //totalCount = a.Length;
+                    res.AddRange(a);
+                }
+
+                if (innerCache.TryGetValue(filePath, out var value))
+                {
+                    res.AddRange(value);
+                    return res;
+                }
+
+                return res;
+            }
+            finally
+            {
+                cacheLock.ExitReadLock();
+            }
+        }
+
+        public static void Add(T entity, string fileName)
         {
             cacheLock.EnterWriteLock();
             try
@@ -45,7 +71,16 @@ namespace SpeedCheck.DAL.Repositories
                 {
                     Marshal.FreeHGlobal(ptr);
                 }
-                innerCache.AddRange(bytes);
+                if (innerCache.TryGetValue(fileName, out var value))
+                {
+                    value.AddRange(bytes);
+                }
+                else
+                {
+                    innerCache.Add(fileName, new List<byte>(bytes));
+                }
+                //innerCache.TryGetValue()
+                //innerCache.AddRange(bytes);
                 //Flush();
             }
             finally
@@ -54,23 +89,28 @@ namespace SpeedCheck.DAL.Repositories
             }
         }
 
-        public static void Flush(string filePath)
+        public static void Flush()
         {
-            cacheLock.EnterWriteLock();
-            try
+            foreach (KeyValuePair<string, List<byte>> entry in innerCache)
             {
-                using (FileStream sourceStream = new FileStream(filePath,
+                cacheLock.EnterWriteLock();
+                try
+                {
+
+                    using (FileStream sourceStream = new FileStream(entry.Key,
                             FileMode.Append, FileAccess.Write, FileShare.None,
                             bufferSize: 128, useAsync: true))
-                {
-                    var bytes = innerCache.ToArray();
-                    sourceStream.Write(bytes, 0, bytes.Length);
+                    {
+                        var bytes = entry.Value.ToArray();
+                        sourceStream.Write(bytes, 0, bytes.Length);
+                    }
+                    // do something with entry.Value or entry.Key
                 }
-            }
-            finally
-            {
-                innerCache = new List<byte>();
-                cacheLock.ExitWriteLock();
+                finally
+                {
+                    innerCache = new Dictionary<string, List<byte>>();
+                    cacheLock.ExitWriteLock();
+                }
             }
         }
 

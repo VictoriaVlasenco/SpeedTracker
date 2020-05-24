@@ -11,24 +11,30 @@ using System.Runtime.Serialization.Formatters.Binary;
 
 namespace SpeedCheck.DAL.Repositories
 {
-    public class FileRepository : IRepository<TrackingData>
+    public class FileRepository : IRepository<TrackingData>, IDisposable
     {
         private const string FilePath = ".\\test.data";
 
-        public FileRepository(ISynchronizedFileCache<TrackingData> synchronizedFileCache)
+        //ISynchronizedFileCache<TrackingData> synchronizedFileCache
+        public FileRepository()
         {
-            this.SynchronizedFileCache = synchronizedFileCache;
+            //this.SynchronizedFileCache = synchronizedFileCache;
         }
 
-        public ISynchronizedFileCache<TrackingData> SynchronizedFileCache { get; }
+        public void Dispose()
+        {
+            SynchronizedFileCache<TrackingData>.Flush();
+        }
+
+        //public ISynchronizedFileCache<TrackingData> SynchronizedFileCache { get; }
 
         public void Insert(TrackingData entity)
         {
             string filePath = FilePath;
-            SynchronizedFileCache.Add(entity);
-            if (SynchronizedFileCache.Count > 128)
+            SynchronizedFileCache<TrackingData>.Add(entity, filePath);
+            if (SynchronizedFileCache<TrackingData>.Count > 128)
             {
-                SynchronizedFileCache.Flush(filePath);
+                SynchronizedFileCache<TrackingData>.Flush();
             }
             //byte[] encodedText = Encoding.Unicode.GetBytes(text);
             //var data = new TrackingData { CheckTime = DateTime.Now, Speed = 60.5, RegistrationNumber = "1234 AE-5" };
@@ -100,103 +106,140 @@ namespace SpeedCheck.DAL.Repositories
             var itemSize = Marshal.SizeOf(default(TrackingData));
 
             var res = new List<TrackingData>();
+            var offset = page * pageSize * itemSize;
 
-            using (FileStream fsSource = new FileStream(FilePath,
-                    FileMode.Open, FileAccess.Read, FileShare.Read))
+            var a = SynchronizedFileCache<TrackingData>.Read(FilePath, offset, pageSize * itemSize).ToArray();
+            totalCount = a.Length;
+            if (a.Length < 1)
             {
-                var offset = page * pageSize * itemSize;
-                //var size = fsSource.Length < pageSize * itemSize ? (int)fsSource.Length : pageSize * itemSize;
-                //var bytesToRead = offset + size < fsSource.Length ? size : fsSource.Length - offset + size;
-                var bytesToRead = offset + pageSize * itemSize < fsSource.Length ? pageSize : fsSource.Length - offset;
+                return res;
+            }
+            try
+            {
+                //Marshal.Copy(a, 0, ptr, 32);
 
-                if (bytesToRead < 1)
+                Span<byte> bytes;
+                //unsafe { bytes = new Span<byte>((byte*)ptr, 32); }
+                for (int i = 0; i < a.Length / itemSize; i++)
                 {
-                    totalCount = 0;
-                    return new List<TrackingData>();
-                }
-                byte[] a = new byte[bytesToRead];
-                //fsSource.Read(a, offset - 1, (int)bytesToRead);
-                fsSource.Seek(offset, SeekOrigin.Begin);
-                fsSource.Read(a, 0, (int)bytesToRead);
-
-                totalCount = a.Length;
-
-                //IntPtr ptr = Marshal.AllocHGlobal(32);
-                try
-                {
-                    //Marshal.Copy(a, 0, ptr, 32);
-
-                    Span<byte> bytes;
-                    //unsafe { bytes = new Span<byte>((byte*)ptr, 32); }
-                    for (int i = 0; i < a.Length / itemSize; i++)
+                    unsafe
                     {
-                        unsafe
+                        bytes = new Span<byte>(a, i * itemSize, itemSize);
+                        fixed (byte* p = bytes)
                         {
-                            bytes = new Span<byte>(a, i * itemSize, itemSize);
-                            fixed (byte* p = bytes)
-                            {
-                                var re = (TrackingData)Marshal.PtrToStructure((IntPtr)p, typeof(TrackingData));
-                                res.Add(re);
-                            }
+                            var re = (TrackingData)Marshal.PtrToStructure((IntPtr)p, typeof(TrackingData));
+                            res.Add(re);
                         }
                     }
-
-                    //bytes = a;
-                    //Span<byte> bytes = a;
-                    //bytes.Slice(0, 32);
-                    //var pinnedRawData = GCHandle.Alloc(bytes, GCHandleType.Pinned);
-
-                    //var pointer = Unsafe.AsPointer(ref a);
-                    //var span = new Span<byte>(pointer, Marshal.SizeOf(default(TrackingData)));
-                    // Get the address of the data array
-                    //var pinnedRawDataPtr = pinnedRawData.AddrOfPinnedObject();
-
-
-                    //var d = bytes.GetPinnableReference();
-                    //unsafe
-                    //{
-                    //    fixed (byte* p = bytes)
-                    //    {
-                    //        var re = (TrackingData)Marshal.PtrToStructure((IntPtr)p, typeof(TrackingData));
-
-                    //    }
-                    //    //var r = MemoryMarshal.GetReference(bytes);
-                    //    var res = MemoryMarshal.Cast<byte, TrackingData>(bytes);
-                    //    //var ad = (TrackingData)bytes;
-                    //    //var f = (byte*)bytes;
-                    //    var ds = (IntPtr)Unsafe.AsPointer(ref bytes.GetPinnableReference());
-                    //    var s = (TrackingData)Marshal.PtrToStructure((IntPtr)ds, typeof(TrackingData));
-
-                    //};
-                    // overlay the data type on top of the raw data
                 }
-                finally
-                {
-
-                    //Marshal.FreeHGlobal(ptr);
-
-                    // must explicitly release
-                    //pinnedRawData.Free();
-                }
-
-                return res;
-                //var result = default(TrackingData);
-                //unsafe
-                //{
-
-                //    var pointer = Unsafe.AsPointer(ref result);
-                //    var span = new Span<byte>(pointer, Marshal.SizeOf(default(TrackingData)));
-                //    fsSource.Read(span);
-                //    var s = result;
-                //}
-
-                //var result = default(TrackingData);
-                //var tSpan = MemoryMarshal.CreateSpan(ref result, 2);
-                //var span = MemoryMarshal.AsBytes(tSpan);
-                //fsSource.Read(span);
-                //var t = result;
-                //var a = result;
             }
+            finally
+            {
+
+                //Marshal.FreeHGlobal(ptr);
+
+                // must explicitly release
+                //pinnedRawData.Free();
+            }
+
+            return res;
+
+            //using (FileStream fsSource = new FileStream(FilePath,
+            //        FileMode.Open, FileAccess.Read, FileShare.Read))
+            //{
+
+            //    //var size = fsSource.Length < pageSize * itemSize ? (int)fsSource.Length : pageSize * itemSize;
+            //    //var bytesToRead = offset + size < fsSource.Length ? size : fsSource.Length - offset + size;
+            //    var bytesToRead = offset + pageSize * itemSize < fsSource.Length ? pageSize * itemSize : fsSource.Length - offset;
+
+            //    if (bytesToRead < 1)
+            //    {
+            //        totalCount = 0;
+            //        return new List<TrackingData>();
+            //    }
+            //    byte[] a = new byte[bytesToRead];
+            //    //fsSource.Read(a, offset - 1, (int)bytesToRead);
+            //    fsSource.Seek(offset, SeekOrigin.Begin);
+            //    fsSource.Read(a, 0, (int)bytesToRead);
+
+            //    totalCount = a.Length;
+
+            //    //IntPtr ptr = Marshal.AllocHGlobal(32);
+            //    //try
+            //    //{
+            //    //    //Marshal.Copy(a, 0, ptr, 32);
+
+            //    //    Span<byte> bytes;
+            //    //    //unsafe { bytes = new Span<byte>((byte*)ptr, 32); }
+            //    //    for (int i = 0; i < a.Length / itemSize; i++)
+            //    //    {
+            //    //        unsafe
+            //    //        {
+            //    //            bytes = new Span<byte>(a, i * itemSize, itemSize);
+            //    //            fixed (byte* p = bytes)
+            //    //            {
+            //    //                var re = (TrackingData)Marshal.PtrToStructure((IntPtr)p, typeof(TrackingData));
+            //    //                res.Add(re);
+            //    //            }
+            //    //        }
+            //    //    }
+
+            //    //    //bytes = a;
+            //    //    //Span<byte> bytes = a;
+            //    //    //bytes.Slice(0, 32);
+            //    //    //var pinnedRawData = GCHandle.Alloc(bytes, GCHandleType.Pinned);
+
+            //    //    //var pointer = Unsafe.AsPointer(ref a);
+            //    //    //var span = new Span<byte>(pointer, Marshal.SizeOf(default(TrackingData)));
+            //    //    // Get the address of the data array
+            //    //    //var pinnedRawDataPtr = pinnedRawData.AddrOfPinnedObject();
+
+
+            //    //    //var d = bytes.GetPinnableReference();
+            //    //    //unsafe
+            //    //    //{
+            //    //    //    fixed (byte* p = bytes)
+            //    //    //    {
+            //    //    //        var re = (TrackingData)Marshal.PtrToStructure((IntPtr)p, typeof(TrackingData));
+
+            //    //    //    }
+            //    //    //    //var r = MemoryMarshal.GetReference(bytes);
+            //    //    //    var res = MemoryMarshal.Cast<byte, TrackingData>(bytes);
+            //    //    //    //var ad = (TrackingData)bytes;
+            //    //    //    //var f = (byte*)bytes;
+            //    //    //    var ds = (IntPtr)Unsafe.AsPointer(ref bytes.GetPinnableReference());
+            //    //    //    var s = (TrackingData)Marshal.PtrToStructure((IntPtr)ds, typeof(TrackingData));
+
+            //    //    //};
+            //    //    // overlay the data type on top of the raw data
+            //    //}
+            //    //finally
+            //    //{
+
+            //    //    //Marshal.FreeHGlobal(ptr);
+
+            //    //    // must explicitly release
+            //    //    //pinnedRawData.Free();
+            //    //}
+
+            //    return res;
+            //    //var result = default(TrackingData);
+            //    //unsafe
+            //    //{
+
+            //    //    var pointer = Unsafe.AsPointer(ref result);
+            //    //    var span = new Span<byte>(pointer, Marshal.SizeOf(default(TrackingData)));
+            //    //    fsSource.Read(span);
+            //    //    var s = result;
+            //    //}
+
+            //    //var result = default(TrackingData);
+            //    //var tSpan = MemoryMarshal.CreateSpan(ref result, 2);
+            //    //var span = MemoryMarshal.AsBytes(tSpan);
+            //    //fsSource.Read(span);
+            //    //var t = result;
+            //    //var a = result;
+            //}
         }
 
         //public void SelectPage(int page = 1, int pageSize = 128)//, out int totalCount)
