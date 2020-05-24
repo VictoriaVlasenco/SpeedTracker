@@ -4,4 +4,9 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\SpeedCheck.DAL.Models\SpeedCheck.DAL.Models.csproj" />
+    <ProjectReference Include="..\SpeedCheck.DAL.Repositories\SpeedCheck.DAL.Repositories.csproj" />
+  </ItemGroup>
+
 </Project>

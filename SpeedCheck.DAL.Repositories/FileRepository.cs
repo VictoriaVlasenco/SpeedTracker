@@ -1,4 +1,5 @@
-﻿using SpeedCheck.DAL.Models;
+﻿using SpeedCheck.DAL.Infrastructure;
+using SpeedCheck.DAL.Models;
 using SpeedCheck.DAL.Repositories.Infrastructure;
 using System;
 using System.Collections.Generic;
@@ -14,56 +15,67 @@ namespace SpeedCheck.DAL.Repositories
     {
         private const string FilePath = ".\\test.data";
 
+        public FileRepository(ISynchronizedFileCache<TrackingData> synchronizedFileCache)
+        {
+            this.SynchronizedFileCache = synchronizedFileCache;
+        }
+
+        public ISynchronizedFileCache<TrackingData> SynchronizedFileCache { get; }
+
         public void Insert(TrackingData entity)
         {
             string filePath = FilePath;
-
+            SynchronizedFileCache.Add(entity);
+            if (SynchronizedFileCache.Count > 128)
+            {
+                SynchronizedFileCache.Flush(filePath);
+            }
             //byte[] encodedText = Encoding.Unicode.GetBytes(text);
             //var data = new TrackingData { CheckTime = DateTime.Now, Speed = 60.5, RegistrationNumber = "1234 AE-5" };
-            var writer = new BinaryFormatter();
-            //writer.Serialize(file, data); // Writes the entire list.
-
-            
-            {
-                using (FileStream sourceStream = new FileStream(filePath,
-                    FileMode.Append, FileAccess.Write, FileShare.None,
-                    bufferSize: 4096, useAsync: true))
-                // using()
-                {
-
-                    int size = Marshal.SizeOf(default(TrackingData));//Get size of struct data
-                    byte[] bytes = new byte[size];//declare byte array and initialize its size
-                    IntPtr ptr = Marshal.AllocHGlobal(size);//pointer to byte array
-
-                    try
-                    {
-                        Marshal.StructureToPtr(entity, ptr, true);
-                        Marshal.Copy(ptr, bytes, 0, size);
-
-                        //Sending struct data  packet
-                        sourceStream.Write(bytes, 0, bytes.Length);//Modified
-                    }
-                    finally
-                    {
-                        Marshal.FreeHGlobal(ptr);
-                    }
-
-                    
-
-                    //var pointer = Unsafe.AsPointer(ref entity);
-                    //var span = new Span<byte>(pointer, Marshal.SizeOf(entity));
-                    //sourceStream.Write(span);
+            //var writer = new BinaryFormatter();
+            ////writer.Serialize(file, data); // Writes the entire list.
 
 
-                    //var tSpan = MemoryMarshal.CreateSpan(ref entity, 1);
-                    //var span = MemoryMarshal.AsBytes(tSpan);
-                    //sourceStream.Write(span);
+            //{
+            //    using (FileStream sourceStream = new FileStream(filePath,
+            //        FileMode.Append, FileAccess.Write, FileShare.None,
+            //        bufferSize: 4096, useAsync: true))
+            //    // using()
+            //    {
 
-                    //writer.Serialize(sourceStream, entity); // Writes the entire list.
+            //        int size = Marshal.SizeOf(default(TrackingData));//Get size of struct data
+            //        byte[] bytes = new byte[size];//declare byte array and initialize its size
+            //        IntPtr ptr = Marshal.AllocHGlobal(size);//pointer to byte array
 
-                    //await sourceStream.WriteAsync(encodedText, 0, encodedText.Length);
-                };
-            }
+            //        try
+            //        {
+            //            Marshal.StructureToPtr(entity, ptr, true);
+            //            Marshal.Copy(ptr, bytes, 0, size);
+
+            //            //Sending struct data  packet
+            //            sourceStream.Write(bytes, 0, bytes.Length);//Modified
+            //        }
+            //        finally
+            //        {
+            //            Marshal.FreeHGlobal(ptr);
+            //        }
+
+
+
+            //        //var pointer = Unsafe.AsPointer(ref entity);
+            //        //var span = new Span<byte>(pointer, Marshal.SizeOf(entity));
+            //        //sourceStream.Write(span);
+
+
+            //        //var tSpan = MemoryMarshal.CreateSpan(ref entity, 1);
+            //        //var span = MemoryMarshal.AsBytes(tSpan);
+            //        //sourceStream.Write(span);
+
+            //        //writer.Serialize(sourceStream, entity); // Writes the entire list.
+
+            //        //await sourceStream.WriteAsync(encodedText, 0, encodedText.Length);
+            //    };
+            //}
 
 
             //using (var file = File.OpenWrite(filename))
@@ -79,15 +91,36 @@ namespace SpeedCheck.DAL.Repositories
             throw new NotImplementedException();
         }
 
-        public void SelectPage(int page = 1, int pageSize = 128)//, out int totalCount)
+        public IEnumerable<TrackingData> SelectPage(int page, int pageSize, out int totalCount)
         {
-            using (FileStream fsSource = new FileStream(FilePath,
-            FileMode.Open, FileAccess.Read))
-            {
-                var size = fsSource.Length > pageSize * 32 ? pageSize * 32 : fsSource.Length;
+            page = page == default(int) ? 1 : page;
+            page = page - 1;
+            pageSize = pageSize == default(int) ? 128 : pageSize;
 
-                byte[] a = new byte[size];
-                fsSource.Read(a);
+            var itemSize = Marshal.SizeOf(default(TrackingData));
+
+            var res = new List<TrackingData>();
+
+            using (FileStream fsSource = new FileStream(FilePath,
+                    FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                var offset = page * pageSize * itemSize;
+                //var size = fsSource.Length < pageSize * itemSize ? (int)fsSource.Length : pageSize * itemSize;
+                //var bytesToRead = offset + size < fsSource.Length ? size : fsSource.Length - offset + size;
+                var bytesToRead = offset + pageSize * itemSize < fsSource.Length ? pageSize : fsSource.Length - offset;
+
+                if (bytesToRead < 1)
+                {
+                    totalCount = 0;
+                    return new List<TrackingData>();
+                }
+                byte[] a = new byte[bytesToRead];
+                //fsSource.Read(a, offset - 1, (int)bytesToRead);
+                fsSource.Seek(offset, SeekOrigin.Begin);
+                fsSource.Read(a, 0, (int)bytesToRead);
+
+                totalCount = a.Length;
+
                 //IntPtr ptr = Marshal.AllocHGlobal(32);
                 try
                 {
@@ -95,14 +128,15 @@ namespace SpeedCheck.DAL.Repositories
 
                     Span<byte> bytes;
                     //unsafe { bytes = new Span<byte>((byte*)ptr, 32); }
-                    for (int i = 0; i < size / 32; i++)
+                    for (int i = 0; i < a.Length / itemSize; i++)
                     {
                         unsafe
                         {
-                            bytes = new Span<byte>(a, i * 32, 32);
+                            bytes = new Span<byte>(a, i * itemSize, itemSize);
                             fixed (byte* p = bytes)
                             {
                                 var re = (TrackingData)Marshal.PtrToStructure((IntPtr)p, typeof(TrackingData));
+                                res.Add(re);
                             }
                         }
                     }
@@ -138,12 +172,14 @@ namespace SpeedCheck.DAL.Repositories
                 }
                 finally
                 {
+
                     //Marshal.FreeHGlobal(ptr);
 
                     // must explicitly release
                     //pinnedRawData.Free();
                 }
 
+                return res;
                 //var result = default(TrackingData);
                 //unsafe
                 //{

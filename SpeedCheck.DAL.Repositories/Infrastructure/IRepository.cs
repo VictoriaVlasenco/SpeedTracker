@@ -15,7 +15,7 @@ namespace SpeedCheck.DAL.Repositories.Infrastructure
         void Insert(TEntity entity);
 
         //IEnumerable<TEntity> SelectPage(int page, int pageSize, out int totalCount);
-        void SelectPage(int page, int pageSize);//, out int totalCount);
+        IEnumerable<TEntity> SelectPage(int page, int pageSize, out int totalCount);
 
         //void InsertRange(IEnumerable<TEntity> entities);
 
