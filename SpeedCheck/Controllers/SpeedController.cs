@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
-using Microsoft.AspNetCore.Mvc.ModelBinding.Binders;
-using Microsoft.Extensions.Logging;
 using SpeedCheck.BusinessLogic;
 using SpeedCheck.BusinessLogic.Models;
+using SpeedCheck.Filters;
 
 namespace SpeedCheck.Controllers
 {
@@ -15,12 +12,10 @@ namespace SpeedCheck.Controllers
     [Route("[controller]")]
     public class SpeedController : ControllerBase
     {
-        private readonly ILogger<SpeedController> logger;
         private readonly ITrackService service;
 
-        public SpeedController(ILogger<SpeedController> logger, ITrackService service)
+        public SpeedController(ITrackService service)
         {
-            logger = logger;
             this.service = service;
         }
 
@@ -32,6 +27,7 @@ namespace SpeedCheck.Controllers
 
         [HttpGet]
         [Route("GetExtremum")]
+        [TypeFilter(typeof(QueryTimeActionFilter))]
         public (TrackingData Min, TrackingData Max) GetExtremum(DateTime date)
         {
             var res = this.service.GetSpeedExtremum(date);
@@ -41,6 +37,7 @@ namespace SpeedCheck.Controllers
 
         [HttpGet]
         [Route("GetExceeded")]
+        [TypeFilter(typeof(QueryTimeActionFilter))]
         public IEnumerable<TrackingData> Get(DateTime date, double speed)
         {
             var res = this.service.GetAllSpeedExceeded(new TrackingDataQuery { CheckTime = date, MaxSpeed = speed });

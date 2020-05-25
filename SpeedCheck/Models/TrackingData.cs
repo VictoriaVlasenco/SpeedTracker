@@ -6,7 +6,6 @@ namespace SpeedCheck.Models
 {
     public class TrackingData
     {
-        [ModelBinder(BinderType = typeof(DateTimeModelBinder))]
         public DateTime CheckTime { get; set; }
 
         public string RegistrationNumber { get; set; }

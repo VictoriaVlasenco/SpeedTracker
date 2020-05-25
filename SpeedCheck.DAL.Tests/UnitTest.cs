@@ -22,7 +22,7 @@
 //            }
 //            //new FileRepository().Insert(data);
 
-//            Assert.True(true, "1 should not be prime");
+//            Assert.True(true);
 //        }
 
 //        [Fact]
@@ -38,7 +38,7 @@
 //            //var t = new FileRepository().SelectPage(2, 1, totalCount: out var total);
 
 //            d.ToList().Max();
-//            Assert.True(true, "1 should not be prime");
+//            Assert.True(true);
 //        }
 //    }
 //}

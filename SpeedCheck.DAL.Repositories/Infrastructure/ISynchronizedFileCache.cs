@@ -5,6 +5,7 @@
         int Count { get; }
 
         void Add(T entity);
+
         void Flush(string filePath);
     }
 }

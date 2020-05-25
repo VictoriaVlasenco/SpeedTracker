@@ -3,7 +3,6 @@ using SpeedCheck.DAL.Repositories.Infrastructure;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-//using Models = SpeedCheck.BusinessLogic.Models;
 
 namespace SpeedCheck.BusinessLogic
 {
