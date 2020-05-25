@@ -13,7 +13,7 @@ namespace SpeedCheck.DAL.Repositories
         private static ReaderWriterLockSlim cacheLock = new ReaderWriterLockSlim();
         private static ConcurrentDictionary<string, List<byte>> innerCache = new ConcurrentDictionary<string, List<byte>>();// new List<byte>();
 
-        public static int Count
+        public static int BufferCount
         { get { return innerCache.Count; } }
 
         public static List<byte> Read(string filePath, int offset, int bytesToRead)
@@ -23,7 +23,7 @@ namespace SpeedCheck.DAL.Repositories
             try
             {
                 using (FileStream fsSource = new FileStream(filePath,
-                    FileMode.Open, FileAccess.Read, FileShare.None))
+                    FileMode.OpenOrCreate, FileAccess.Read, FileShare.None))
                 {
                     bytesToRead = offset + bytesToRead < fsSource.Length ? bytesToRead : (int)fsSource.Length - offset;
                     if (bytesToRead < 1)
@@ -54,6 +54,32 @@ namespace SpeedCheck.DAL.Repositories
 
             return res;
         }
+
+        public static long Count(string filePath)
+        {
+            cacheLock.EnterReadLock();
+            long length;
+            try
+            {
+                using (FileStream fsSource = new FileStream(filePath,
+                    FileMode.OpenOrCreate, FileAccess.Read, FileShare.None))
+                {
+                    length = fsSource.Length;
+                }
+
+                if (innerCache.TryGetValue(filePath, out var value))
+                {
+                    length += value.Count;
+                }
+
+                return length;
+            }
+            finally
+            {
+                cacheLock.ExitReadLock();
+            }
+        }
+
 
         public static void Add(T entity, string fileName)
         {

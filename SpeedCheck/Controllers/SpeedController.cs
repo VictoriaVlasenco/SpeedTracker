@@ -1,52 +1,53 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Binders;
 using Microsoft.Extensions.Logging;
+using SpeedCheck.BusinessLogic;
+using SpeedCheck.BusinessLogic.Models;
 
 namespace SpeedCheck.Controllers
 {
+
     [ApiController]
     [Route("[controller]")]
     public class SpeedController : ControllerBase
     {
-        private static readonly string[] Summaries = new[]
-        {
-            "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-        };
+        private readonly ILogger<SpeedController> logger;
+        private readonly ITrackService service;
 
-        private readonly ILogger<SpeedController> _logger;
-
-        public SpeedController(ILogger<SpeedController> logger)
+        public SpeedController(ILogger<SpeedController> logger, ITrackService service)
         {
-            _logger = logger;
+            logger = logger;
+            this.service = service;
         }
 
         [HttpPost]
-        public IEnumerable<WeatherForecast> Save()
+        public void Save([FromBody]Models.TrackingData data)
         {
-            var rng = new Random();
-            return Enumerable.Range(1, 5).Select(index => new WeatherForecast
-            {
-                Date = DateTime.Now.AddDays(index),
-                TemperatureC = rng.Next(-20, 55),
-                Summary = Summaries[rng.Next(Summaries.Length)]
-            })
-            .ToArray();
+            this.service.Save(new TrackingData { CheckTime = data.CheckTime, RegistrationNumber = data.RegistrationNumber, Speed = data.Speed });
         }
 
         [HttpGet]
-        public IEnumerable<WeatherForecast> Get()
+        [Route("GetExtremum")]
+        public (TrackingData Min, TrackingData Max) GetExtremum(DateTime date)
         {
-            var rng = new Random();
-            return Enumerable.Range(1, 5).Select(index => new WeatherForecast
-            {
-                Date = DateTime.Now.AddDays(index),
-                TemperatureC = rng.Next(-20, 55),
-                Summary = Summaries[rng.Next(Summaries.Length)]
-            })
-            .ToArray();
+            var res = this.service.GetSpeedExtremum(date);
+
+            return res;
         }
+
+        [HttpGet]
+        [Route("GetExceeded")]
+        public IEnumerable<TrackingData> Get(DateTime date, double speed)
+        {
+            var res = this.service.GetAllSpeedExceeded(new TrackingDataQuery { CheckTime = date, MaxSpeed = speed });
+
+            return res;
+        }
+
+
     }
 }
