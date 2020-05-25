@@ -1,5 +1,6 @@
 ﻿using SpeedCheck.DAL.Infrastructure;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -10,17 +11,17 @@ namespace SpeedCheck.DAL.Repositories
     public static class SynchronizedFileCache<T>// : ISynchronizedFileCache<T>
     {
         private static ReaderWriterLockSlim cacheLock = new ReaderWriterLockSlim();
-        private static Dictionary<string, List<byte>> innerCache = new Dictionary<string, List<byte>>();// new List<byte>();
+        private static ConcurrentDictionary<string, List<byte>> innerCache = new ConcurrentDictionary<string, List<byte>>();// new List<byte>();
 
         public static int Count
         { get { return innerCache.Count; } }
 
         public static List<byte> Read(string filePath, int offset, int bytesToRead)
         {
+            var res = new List<byte>();
             cacheLock.EnterReadLock();
             try
             {
-                var res = new List<byte>();
                 using (FileStream fsSource = new FileStream(filePath,
                     FileMode.Open, FileAccess.Read, FileShare.None))
                 {
@@ -39,54 +40,54 @@ namespace SpeedCheck.DAL.Repositories
                     //totalCount = a.Length;
                     res.AddRange(a);
                 }
-
-                if (innerCache.TryGetValue(filePath, out var value))
-                {
-                    res.AddRange(value);
-                    return res;
-                }
-
-                return res;
             }
             finally
             {
                 cacheLock.ExitReadLock();
             }
+
+            if (innerCache.TryGetValue(filePath, out var value))
+            {
+                res.AddRange(value);
+                return res;
+            }
+
+            return res;
         }
 
         public static void Add(T entity, string fileName)
         {
-            cacheLock.EnterWriteLock();
+            //cacheLock.EnterWriteLock();
+            //try
+            //{
+            int size = Marshal.SizeOf(default(T));//Get size of struct data
+            byte[] bytes = new byte[size];//declare byte array and initialize its size
+            IntPtr ptr = Marshal.AllocHGlobal(size);//pointer to byte array
             try
             {
-                int size = Marshal.SizeOf(default(T));//Get size of struct data
-                byte[] bytes = new byte[size];//declare byte array and initialize its size
-                IntPtr ptr = Marshal.AllocHGlobal(size);//pointer to byte array
-                try
-                {
-                    Marshal.StructureToPtr(entity, ptr, true);
-                    Marshal.Copy(ptr, bytes, 0, size);
-                }
-                finally
-                {
-                    Marshal.FreeHGlobal(ptr);
-                }
-                if (innerCache.TryGetValue(fileName, out var value))
-                {
-                    value.AddRange(bytes);
-                }
-                else
-                {
-                    innerCache.Add(fileName, new List<byte>(bytes));
-                }
-                //innerCache.TryGetValue()
-                //innerCache.AddRange(bytes);
-                //Flush();
+                Marshal.StructureToPtr(entity, ptr, true);
+                Marshal.Copy(ptr, bytes, 0, size);
             }
             finally
             {
-                cacheLock.ExitWriteLock();
+                Marshal.FreeHGlobal(ptr);
             }
+            if (innerCache.TryGetValue(fileName, out var value))
+            {
+                value.AddRange(bytes);
+            }
+            else
+            {
+                innerCache.AddOrUpdate(fileName, new List<byte>(bytes), (k, v) => { v.AddRange(bytes); return v; }); ;
+            }
+            //innerCache.TryGetValue()
+            //innerCache.AddRange(bytes);
+            //Flush();
+            //}
+            //finally
+            //{
+            //    cacheLock.ExitWriteLock();
+            //}
         }
 
         public static void Flush()
@@ -108,7 +109,7 @@ namespace SpeedCheck.DAL.Repositories
                 }
                 finally
                 {
-                    innerCache = new Dictionary<string, List<byte>>();
+                    innerCache = new ConcurrentDictionary<string, List<byte>>();
                     cacheLock.ExitWriteLock();
                 }
             }

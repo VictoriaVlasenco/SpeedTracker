@@ -34,7 +34,8 @@ namespace SpeedCheck.DAL.Tests
             //var data = new Models.TrackingData { CheckTime = DateTime.Now, Speed = 60.5, RegistrationNumber = "1234 AE-5" };
             //new FileRepository().Insert(data);
             //var a = new FileRepository().SelectPage(1, 2, totalCount: out var total);
-            var d = new FileRepository().SelectPage(1, 2, totalCount: out var total1);
+            var d = new FileRepository().SelectPage(1, 3, totalCount: out var total1);
+            var t = new FileRepository().SelectPage(2, 1, totalCount: out var total);
 
             d.ToList().Max(x => x.Speed);
             Assert.True(true, "1 should not be prime");
